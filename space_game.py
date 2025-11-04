@@ -54,7 +54,13 @@ def create_stars(
                 break
 
         coroutines.append(
-            blink(canvas, star_row, star_col, symbol=random.choice('+*.:'))
+            blink(
+                canvas,
+                star_row,
+                star_col,
+                symbol=random.choice('+*.:'),
+                offset_tics=random.randint(1, 20)
+            )
         )
 
     return coroutines
@@ -70,12 +76,18 @@ async def animate_spaceship(
     Animates a spaceship animation.
     """
     row, col = start_row, start_col
-    frame_cycle = cycle(frames)
-    current_frame = next(frame_cycle)
 
-    frame_h, frame_w = get_frame_size(current_frame)
+    repeated_frames = []
+    for frame in frames:
+        repeated_frames.extend([frame, frame])
+
+    frame_cycle = cycle(repeated_frames)
 
     while True:
+        # reload frame
+        current_frame = next(frame_cycle)
+        frame_h, frame_w = get_frame_size(current_frame)
+
         # erase the old frame
         draw_frame(canvas, row, col, current_frame, negative=True)
 
@@ -99,9 +111,15 @@ async def animate_spaceship(
         await asyncio.sleep(0)
 
 
-async def blink(canvas, row, column, symbol='*'):
+async def blink(
+        canvas,
+        row: int,
+        column: int,
+        symbol='*',
+        offset_tics: int = 0,
+):
     while True:
-        for i in range(random.randint(1, 20)):
+        for i in range(offset_tics):
             await asyncio.sleep(0)
 
         canvas.addstr(row, column, symbol, curses.A_DIM)
@@ -147,13 +165,11 @@ def draw(canvas):
     coroutines.append(animate_spaceship(canvas, ship_row, ship_col, frames))
 
     while True:
-        for coroutine in coroutines [:]:
+        for coroutine in coroutines[:]:
             try:
                 coroutine.send(None)
             except StopIteration:
                 coroutines.remove(coroutine)
-
-        canvas.refresh()
         curses.napms(100)
 
 
